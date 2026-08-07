@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PlateMate · Fast vs Healthy Builder</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #0b1120;
+      color: #e2e8f0;
+      padding: 24px;
+    }
+
+    .app {
+      max-width: 1440px;
+      margin: 0 auto;
+      background: #0f172a;
+      border-radius: 2rem;
+      padding: 1.8rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    }
+
+    /* responsive 3-col grid */
+    @media (min-width: 1200px) {
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.1fr 1fr;
+        gap: 1.8rem;
+      }
+    }
+    @media (max-width: 1199px) {
+      .dashboard-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+    }
+
+    /* card style */
+    .card-panel {
+      background: #020617;
+      border-radius: 1.5rem;
+      border: 1px solid #1e293b;
+      padding: 1.2rem;
+      transition: all 0.2s;
+    }
+
+    /* dual column layout (fast/healthy) */
+    .dual-columns {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    @media (min-width: 640px) {
+      .dual-columns {
+        flex-direction: row;
+        gap: 1rem;
+      }
+    }
+    .food-col {
+      flex: 1;
+      background: #0f172a;
+      border-radius: 1.2rem;
+      padding: 0.9rem;
+      border: 1px solid #1e293b;
+    }
+    .col-title {
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 0.9rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid #334155;
+    }
+    .food-item {
+      background: #1e293b;
+      border-radius: 1rem;
+      padding: 0.6rem 0.9rem;
+      margin-bottom: 0.7rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      border-left: 4px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .food-item.fast { border-left-color: #f97316; background: rgba(249, 115, 22, 0.08); }
+    .food-item.healthy { border-left-color: #2dd4bf; background: rgba(45, 212, 191, 0.08); }
+    .food-item:hover { transform: translateX(3px); background: rgba(51, 65, 85, 0.6); }
+    .food-item.selectedA { background: rgba(249, 115, 22, 0.4); border-left-width: 6px; box-shadow: 0 0 0 1px #f97316; }
+    .food-item.selectedB { background: rgba(45, 212, 191, 0.4); border-left-width: 6px; box-shadow: 0 0 0 1px #2dd4bf; }
+    .item-name { font-weight: 500; font-size: 0.85rem; }
+    .item-name span { font-size: 0.65rem; color: #94a3b8; display: block; }
+    .kcal-badge { font-weight: 700; background: #0f172a; padding: 0.2rem 0.6rem; border-radius: 40px; font-size: 0.7rem; }
+
+    .summary-box {
+      margin-top: 1.2rem;
+      background: #020617;
+      border-radius: 1rem;
+      padding: 0.9rem;
+      border: 1px solid #2d3a5e;
+    }
+    .reset-btn {
+      background: transparent;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      padding: 0.3rem 1rem;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+
+    /* plate builder center */
+    .builder-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #2dd4bf, #38bdf8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    .plate-list {
+      background: #111827;
+      border-radius: 1.2rem;
+      padding: 0.8rem;
+      margin: 1rem 0;
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid #2d4a3e;
+    }
+    .plate-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #1e293b;
+      margin: 8px 0;
+      padding: 8px 12px;
+      border-radius: 1rem;
+      border-left: 3px solid #2dd4bf;
+    }
+    .plate-item-img {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #2d3a5e;
+    }
+    .plate-item-info { flex: 1; font-size: 0.8rem; }
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #f87171;
+      cursor: pointer;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    .macro-grid {
+      background: #0b1120;
+      border-radius: 1rem;
+      padding: 0.8rem;
+      margin: 1rem 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .macro-cell { text-align: center; }
+    .clear-plate-btn {
+      background: #334155;
+      border: none;
+      padding: 8px;
+      border-radius: 40px;
+      font-weight: 600;
+      width: 100%;
+      cursor: pointer;
+      color: white;
+    }
+    .suggestions {
+      margin-top: 1.2rem;
+    }
+    .suggestions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.7rem;
+      margin-top: 10px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .suggest-card {
+      background: #1e293b;
+      border-radius: 0.8rem;
+      padding: 6px;
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid #2d3a5e;
+      transition: 0.1s;
+    }
+    .suggest-card:hover { border-color: #2dd4bf; background: #2d3a4e; }
+    .suggest-img { width: 100%; height: 70px; object-fit: cover; border-radius: 0.5rem; }
+    .suggest-name { font-size: 0.7rem; font-weight: bold; margin-top: 4px; }
+    .suggest-kcal { font-size: 0.65rem; color: #facc15; }
+
+    /* compare explorer */
+    .compare-duo {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .compare-card {
+      flex: 1;
+      background: #111827;
+      border-radius: 1rem;
+      padding: 0.8rem;
+      border-top: 4px solid;
+    }
+    .compare-a { border-top-color: #f97316; }
+    .compare-b { border-top-color: #2dd4bf; }
+    .compare-img { width: 100%; height: 110px; object-fit: cover; border-radius: 0.7rem; background: #1e293b; }
+    .macro-strip { margin-top: 10px; }
+    .macro-row { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; }
+    .macro-bar-bg { flex: 1; height: 5px; background: #2d3a5e; border-radius: 6px; overflow: hidden; }
+    .macro-fill { height: 100%; background: #facc15; border-radius: 6px; }
+    .swap-btn {
+      background: #facc15;
+      color: #0f172a;
+      padding: 6px 14px;
+      border-radius: 40px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      margin: 4px auto 0;
+      display: block;
+    }
+    .explorer-filters {
+      display: flex;
+      gap: 10px;
+      margin: 1rem 0;
+      flex-wrap: wrap;
+    }
+    .filter-tab {
+      background: #1e293b;
+      border: none;
+      padding: 0.3rem 1rem;
+      border-radius: 40px;
+      cursor: pointer;
+      color: white;
+    }
+    .filter-tab.active { background: #f97316; color: black; font-weight: bold; }
+    .search-input {
+      background: #1e293b;
+      padding: 0.3rem 1rem;
+      border-radius: 40px;
+      border: none;
+      color: white;
+      width: 150px;
+    }
+    .explorer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.8rem;
+      max-height: 340px;
+      overflow-y: auto;
+    }
+    .exp-card {
+      background: #111827;
+      border-radius: 0.8rem;
+      padding: 0.5rem;
+      cursor: pointer;
+      border: 1px solid #2d3a5e;
+      text-align: center;
+    }
+    .exp-img { width: 100%; height: 85px; object-fit: cover; border-radius: 0.5rem; }
+    .tiny-btn {
+      background: #2d3a5e;
+      border: none;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.65rem;
+      margin: 4px 2px;
+      cursor: pointer;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(6px);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal.open { display: flex; }
+    .modal-card {
+      background: #0f172a;
+      border-radius: 1.3rem;
+      max-width: 340px;
+      width: 90%;
+      padding: 1.2rem;
+      border: 1px solid #2dd4bf;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+  <h1 style="color: green;">ULTIMATE PLATE BUILDER</h1>
+<h2 style="color: green;">Fast vs Healthy · Macro Vision</h2>
+<div class="subtitle" style="color: green;">Every item has an image — tap to build your plate</div>
+
+
+  🟦 Tooltip 1 — “Add to Plate”
+Tap any food to add it to your plate.  
+Your totals update instantly.
+
+🟦 Tooltip 2 — “Compare A/B”
+Set foods as A or B to compare macros side‑by‑side.  
+Great for fast vs healthy swaps.
+
+🟦 Tooltip 3 — “Swap Button”
+Swap A ↔ B to see the healthier choice.  
+The difference updates live.
+
+🟦 Tooltip 4 — “Plate Summary”
+Your calories + macros appear here.  
+Everything updates in real time.
+
+🟦 Tooltip 5 — “Clear Plate”
+Reset your plate anytime.  
+Start fresh with one tap.
+
+🟦 Tooltip 6 — “Quick Adds”
+Add common healthy items instantly.  
+Perfect for fast plate building.
+
+🟦 Tooltip 7 — “Search Bar”
+Search any food quickly.  
+Tap to add, compare, or swap.
+
+🟦 Tooltip 8 — “Categories: Fast / Healthy”
+Switch between Fast and Healthy foods.  
+Explore both sides of your plate.
+<div class="app">
+  <div class="dashboard-grid">
+    
+    <!-- LEFT PANEL: FAST VS HEALTHY CLASSIC -->
+    <div class="card-panel">
+      <h2 style="font-size: 1.3rem; margin-bottom: 0.2rem; color: green;">
+  Compare Kcal/Macro<br>Fast vs Healthy foods
+</h2>
+
+      <div class="dual-columns">
+        <div class="food-col">
+          <div class="col-title">🔥 Fast food</div>
+          <div id="fastItemsContainer"></div>
+        </div>
+        <div class="food-col">
+          <div class="col-title">🌿 Healthy</div>
+          <div id="healthyItemsContainer"></div>
+        </div>
+      </div>
+      <div class="summary-box">
+        <div style="display:flex; justify-content:space-between; margin:0.3rem 0"><span>🍔 Fast total</span><span id="fastTotalSpan">0 kcal</span></div>
+        <div style="display:flex; justify-content:space-between; margin:0.3rem 0"><span>🥗 Healthy total</span><span id="healthyTotalSpan">0 kcal</span></div>
+        <div style="display:flex; justify-content:space-between; margin:0.3rem 0"><span>⚖️ Difference</span><span id="diffSpan">—</span></div>
+        <button class="reset-btn" id="resetClassicBtn">⟳ Reset choices</button>
+      </div>
+    </div>
+
+    <!-- MIDDLE PANEL: CUSTOM PLATE BUILDER -->
+    <div class="card-panel">
+     <div class="builder-title" style="color: green;">🥑 Your perfect plate</div>
+      <div class="plate-list" id="customPlateList">
+        <div style="text-align:center; color:#94a3b8;">✨ Empty plate — add healthy foods ✨</div>
+      </div>
+      <div class="macro-grid">
+        <div class="macro-cell"><div style="font-size:0.7rem;">🔥 Calories</div><div id="plateCalories" style="font-weight:800;">0</div></div>
+        <div class="macro-cell"><div style="font-size:0.7rem;">💪 Protein</div><div id="plateProtein">0g</div></div>
+        <div class="macro-cell"><div style="font-size:0.7rem;">🍚 Carbs</div><div id="plateCarbs">0g</div></div>
+        <div class="macro-cell"><div style="font-size:0.7rem;">🧈 Fats</div><div id="plateFat">0g</div></div>
+      </div>
+      <button class="clear-plate-btn" id="clearPlateBtn">🗑️ Clear plate</button>
+      <div class="suggestions">
+        <div style="font-weight:600; margin: 8px 0;">➕ Quick adds (healthy)</div>
+        <div class="suggestions-grid" id="suggestionsGrid"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: EXPLORER + COMPARE A/B -->
+    <div class="card-panel">
+      <div style="font-size: 1.3rem; margin-bottom:0.5rem; color:#00e676;">
+  🍽️ Compare explorer
+</div>
+      <div class="compare-duo">
+        <div class="compare-card compare-a"><div><strong>🔴 COMPARE A</strong></div><img id="compareAImg" class="compare-img" src="https://placehold.co/200x110/1e293b?text=—"><div id="compareAName" style="font-weight:bold;">—</div><div id="compareAKcal">0 kcal</div><div class="macro-strip" id="macroAStrip"></div></div>
+        <div class="compare-card compare-b"><div><strong>🟢 COMPARE B</strong></div><img id="compareBImg" class="compare-img" src="https://placehold.co/200x110/1e293b?text=—"><div id="compareBName" style="font-weight:bold;">—</div><div id="compareBKcal">0 kcal</div><div class="macro-strip" id="macroBStrip"></div></div>
+      </div>
+      <button class="swap-btn" id="swapABBtn">🔄 Swap A ↔ B</button>
+      <div class="explorer-filters">
+        <div><button class="filter-tab active" data-filter="all">All</button><button class="filter-tab" data-filter="fast">Fast</button><button class="filter-tab" data-filter="healthy">Healthy</button></div>
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 search">
+      </div>
+      <div id="explorerGrid" class="explorer-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="itemModal" class="modal"><div class="modal-card"><span id="closeModal" style="float:right; cursor:pointer;">&times;</span><img id="modalImg" style="width:100%; border-radius:12px;" src=""><h3 id="modalName"></h3><div id="modalMacros" style="margin:8px 0;"></div><div style="display:flex; gap:8px; margin-top:12px;"><button id="modalSetA" style="flex:1;">Set as A</button><button id="modalSetB" style="flex:1;">Set as B</button><button id="modalAddPlate" style="flex:1; background:#2dd4bf;">➕ Add to plate</button></div></div></div>
+
+<script>
+  // ---------- CLEAN, CONSISTENT DATABASE (no duplicates, all items well-formed) ----------
+  const FAST_ITEMS = [
+{ name: "Cheeseburger", type: "fast", kcal: 520, protein: 27, carbs: 40, fat: 32, image: "https://tse3.mm.bing.net/th/id/OIP.VaylBh1Ji1cu7f0DirnMpgHaE7?rs=1&pid=ImgDetMain" },
+{ name: "Double Cheeseburger", type: "fast", kcal: 740, protein: 42, carbs: 46, fat: 48, image: "https://www.bing.com/th/id/OIP.kA2EjJJZ_6XQg3DNP590YgHaLH?w=193&h=290&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" },
+{ name: "Bacon Burger", type: "fast", kcal: 690, protein: 36, carbs: 41, fat: 45, image: "https://thfvnext.bing.com/th/id/OIP.1joDZ2qwgWfYnyToCwCPzwHaJQ?w=154&h=194&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Crispy Chicken Sandwich", type: "fast", kcal: 620, protein: 28, carbs: 52, fat: 32, image: "https://thfvnext.bing.com/th/id/OIP.jEc0f0ktevUl6jLIrklNCgHaJQ?w=205&h=256&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Spicy Chicken Sandwich", type: "fast", kcal: 670, protein: 30, carbs: 54, fat: 36, image: "https://www.bing.com/th/id/OIP.AYXhqgGvvn9DUH-rMTmhWAHaHa?w=193&h=193&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" },
+{ name: "Fish Fillet Sandwich", type: "fast", kcal: 450, protein: 20, carbs: 45, fat: 22, image: "https://thfvnext.bing.com/th/id/OIP.WePCGjou6kPpw1x6FAuWvAHaEJ?w=321&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Chicken Nuggets (10 pcs)", type: "fast", kcal: 470, protein: 28, carbs: 30, fat: 28, image: "https://thfvnext.bing.com/th/id/OIP.oh5DNwhTkQqvqHgjU_M8QwHaHa?w=201&h=201&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Pepperoni Pizza Slice", type: "fast", kcal: 310, protein: 14, carbs: 34, fat: 14, image: "https://thfvnext.bing.com/th/id/OIP.eY8E9KRlMtUCFBRHXG5ZtwHaE7?w=276&h=184&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Meat Lovers Pizza Slice", type: "fast", kcal: 380, protein: 18, carbs: 36, fat: 20, image: "https://thfvnext.bing.com/th/id/OIP.YPG94WouzqS91ov41glMMgHaHa?w=173&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Chicken Alfredo Pasta", type: "fast", kcal: 1180, protein: 52, carbs: 96, fat: 68, image: "https://tse2.mm.bing.net/th/id/OIP.zgunlTfT1txanzzY-TSyRwHaLC?cb=thfvnext&pid=ImgDet&w=182&h=270&c=7&o=7&rm=3" },
+{ name: "Beef Burrito", type: "fast", kcal: 780, protein: 38, carbs: 82, fat: 32, image: "https://thfvnext.bing.com/th/id/OIP.-EjrknxPLRQNIC0PWp-ozwHaLG?w=204&h=306&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Triple Cheeseburger", type: "fast", kcal: 980, protein: 58, carbs: 48, fat: 68, image: "https://www.bing.com/th/id/OIP.ysO6uPlCKBO2ip9_59C5ZgHaHK?w=193&h=186&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" },
+{ name: "BBQ Bacon Burger", type: "fast", kcal: 860, protein: 45, carbs: 55, fat: 52, image: "https://thfvnext.bing.com/th/id/OIP.DXaNkOOXUE37V7KkcjyDSgHaHa?w=165&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Mushroom Swiss Burger", type: "fast", kcal: 720, protein: 38, carbs: 44, fat: 46, image: "https://12onions.com/wp-content/uploads/Mushroom-Swiss-Burger-2.jpg" },
+{ name: "Grilled Chicken Sandwich", type: "fast", kcal: 480, protein: 32, carbs: 42, fat: 18, image: "https://th.bing.com/th/id/R.cc602a72da4e315915aa73f3e1541b4a?rik=ZZ56DBPlp%2bHe7Q&pid=ImgRaw&r=0" },
+{ name: "Chicken Deluxe Sandwich", type: "fast", kcal: 690, protein: 34, carbs: 53, fat: 34, image: "https://thfvnext.bing.com/th/id/OIP.HThT3a0BSKGwrCacLA1NbgHaF7?w=225&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Chicken Tenders (5 pcs)", type: "fast", kcal: 600, protein: 32, carbs: 38, fat: 34, image: "https://thfvnext.bing.com/th/id/OIP.6dc13SAJXaqfNv5_7qNo8QHaE8?w=280&h=187&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Large Curly Fries", type: "fast", kcal: 540, protein: 6, carbs: 63, fat: 28, image: "https://thfvnext.bing.com/th/id/OIP.xKvjp3lqVtJYnZiofLmNTgHaFj?w=219&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Onion Rings", type: "fast", kcal: 410, protein: 5, carbs: 46, fat: 22, image: "https://thfvnext.bing.com/th/id/OIP.qNUmtZzDGDLqPfoGhGl7KgHaEK?w=293&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Loaded Cheese Fries", type: "fast", kcal: 780, protein: 18, carbs: 68, fat: 48, image: "https://thfvnext.bing.com/th/id/OIP.OyPDOxHYrq6EN1u-LipcUAHaJQ?w=140&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Supreme Beef Taco", type: "fast", kcal: 210, protein: 10, carbs: 18, fat: 12, image: "https://thfvnext.bing.com/th/id/OIP.jyUzG2CYqnU0JFgXV1MoWgHaFj?w=211&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Chicken Soft Taco", type: "fast", kcal: 190, protein: 12, carbs: 20, fat: 8, image: "https://thfvnext.bing.com/th/id/OIP.VTaPjjLgE3TC68Z2rywZMgHaE7?w=281&h=187&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Beef Quesadilla", type: "fast", kcal: 620, protein: 32, carbs: 48, fat: 34, image: "https://tse2.mm.bing.net/th/id/OIP.Z_zCCZqp6cCm9dLj6Lx2vgHaJQ?cb=thfvnext&pid=ImgDet&w=184&h=230&c=7&o=7&rm=3" },
+{ name: "Chicken Quesadilla", type: "fast", kcal: 580, protein: 34, carbs: 46, fat: 30, image: "https://thfvnext.bing.com/th/id/OIP.6cFf_l47cfB363bVN-jFUQHaHa?w=205&h=205&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Loaded Nachos", type: "fast", kcal: 920, protein: 28, carbs: 82, fat: 54, image: "https://thfvnext.bing.com/th/id/OIP.AA-6qNmewFkgnTq2Lj74CgHaHa?w=205&h=205&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Beef Crunchwrap", type: "fast", kcal: 670, protein: 24, carbs: 72, fat: 32, image: "https://tse3.mm.bing.net/th/id/OIP.bbom5Ss_rQyJEBNmpAszWgHaKX?cb=thfvnext&rs=1&pid=ImgDetMain&o=7&rm=3" },
+{ name: "Large Chili Cheese Dog", type: "fast", kcal: 680, protein: 26, carbs: 52, fat: 42, image: "https://tse1.mm.bing.net/th/id/OIP.mRA_DCTdAkqrRPkH-oWWRAHaFr?cb=thfvnext&pid=ImgDet&w=184&h=141&c=7&o=7&rm=3" },
+{ name: "Corn Dog", type: "fast", kcal: 330, protein: 9, carbs: 34, fat: 18, image: "https://thfvnext.bing.com/th/id/OIP.WMVEtqlxkE8oQp53UzVAyQHaEY?w=322&h=190&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Footlong Hot Dog", type: "fast", kcal: 540, protein: 22, carbs: 44, fat: 32, image: "https://thfvnext.bing.com/th/id/OIP.YAU4BQEIP5PCNguajLCOxQHaE7?w=217&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Shrimp Basket", type: "fast", kcal: 720, protein: 28, carbs: 64, fat: 38, image: "https://thfvnext.bing.com/th/id/OIP.tPPx-T94NOhciW0VDmmRZQHaHa?w=176&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Fried Fish & Chips", type: "fast", kcal: 980, protein: 36, carbs: 88, fat: 54, image: "https://thfvnext.bing.com/th/id/OIP.eINOxA3i-nSqhuwuuhqtdwHaE9?w=287&h=192&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Popcorn Shrimp", type: "fast", kcal: 540, protein: 20, carbs: 42, fat: 32, image: "https://www.bing.com/th/id/OIP.t2lGCsMx1LZBJ4_wYhZ1qQHaLH?w=193&h=290&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" },
+{ name: "Sausage Egg Biscuit", type: "fast", kcal: 610, protein: 22, carbs: 38, fat: 42, image: "https://www.bing.com/th/id/OIP.ovSHANP-HzaS9Tl6VwH9lQHaHa?w=193&h=193&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" },
+{ name: "Bacon Egg Croissant", type: "fast", kcal: 540, protein: 20, carbs: 36, fat: 34, image: "https://thfvnext.bing.com/th/id/OIP.svDUVlGm_UdobiAt2ePMfQHaHa?w=182&h=194&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Pancake Platter", type: "fast", kcal: 780, protein: 18, carbs: 112, fat: 28, image: "https://thfvnext.bing.com/th/id/OIP.1Bo-O2Uuaz1CMePLKB9f_QHaHa?w=188&h=188&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Buffalo Wings (8 pcs)", type: "fast", kcal: 760, protein: 42, carbs: 12, fat: 58, image: "https://tse4.mm.bing.net/th/id/OIP.OOlrzI2j-sMH65IjgGtPPAHaFY?cb=thfvnext&rs=1&pid=ImgDetMain&o=7&rm=3" },
+{ name: "BBQ Wings (8 pcs)", type: "fast", kcal: 720, protein: 40, carbs: 18, fat: 52, image: "https://tse3.mm.bing.net/th/id/OIP.GSlUghvmQzXV9YW0rNamBgHaHa?cb=thfvnext&pid=ImgDet&w=182&h=182&c=7&o=7&rm=3" },
+{ name: "Mozzarella Sticks (6 pcs)", type: "fast", kcal: 540, protein: 22, carbs: 38, fat: 34, image: "https://thfvnext.bing.com/th/id/OIP.Rb3RobRiUJ44WT0EK1vTLQHaHa?w=161&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Philly Cheesesteak", type: "fast", kcal: 890, protein: 48, carbs: 62, fat: 48, image: "https://thfvnext.bing.com/th/id/OIP._xgnbIEyiA0jvseFFwFF9gHaJQ?w=135&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Meatball Sub", type: "fast", kcal: 760, protein: 36, carbs: 64, fat: 38, image: "https://thfvnext.bing.com/th/id/OIP.2TfoG4AAUTvzmNh4aJLGowHaEJ?w=269&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Italian Sub", type: "fast", kcal: 680, protein: 32, carbs: 58, fat: 32, image: "https://thfvnext.bing.com/th/id/OIP.vFgjXoGaRu0NScaYVraJowHaEK?w=322&h=181&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" }
+];
+  
+  const HEALTHY_ITEMS = [
+{ name: "Grilled Chicken Breast", type: "healthy", kcal: 310, protein: 48, carbs: 0, fat: 8, image: "https://thfvnext.bing.com/th/id/OIP.CLwTJVk8PwqqiGW4tGbZIwHaLH?w=204&h=374&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Baked Salmon", type: "healthy", kcal: 420, protein: 40, carbs: 0, fat: 26, image: "https://thfvnext.bing.com/th/id/OIP.qT4Rfn1jiW2BTlPwbSclAwHaLH?w=204&h=306&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Grilled Tilapia", type: "healthy", kcal: 220, protein: 38, carbs: 0, fat: 6, image: "https://thfvnext.bing.com/th/id/OIP.ixR0Yvt23j23aH2iGmQKhAHaD-?w=305&h=180&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Quinoa & Chickpea Bowl", type: "healthy", kcal: 420, protein: 18, carbs: 62, fat: 12, image: "https://thfvnext.bing.com/th/id/OIP.iNmU5uJcjiRFFHs5KPYPLAHaJX?w=205&h=259&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Brown Rice & Veggie Bowl", type: "healthy", kcal: 380, protein: 12, carbs: 68, fat: 8, image: "https://th.bing.com/th/id/R.f610df4c8f3edec29500f056494f8df2?rik=BejsRR5RcPB%2fwg&pid=ImgRaw&r=0" },
+{ name: "Mediterranean Hummus Bowl", type: "healthy", kcal: 460, protein: 14, carbs: 52, fat: 22, image: "https://thfvnext.bing.com/th/id/OIP.lLRdl7mk8bfQKARGVZhXigHaLH?w=204&h=306&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Avocado & Brown Rice Bowl", type: "healthy", kcal: 480, protein: 10, carbs: 62, fat: 20, image: "https://ts3.mm.bing.net/th?id=OIP.ZiHAtW-Ba3qqgm4IPv7-bQAAAA&pid=15.1&o=7&rm=3" },
+{ name: "Salmon & Quinoa Bowl", type: "healthy", kcal: 520, protein: 42, carbs: 38, fat: 22, image: "https://thfvnext.bing.com/th/id/OSK.54629e248be484e4fe744504d028c1ec?w=424&h=424&c=7&rs=1&qlt=90&o=6&pid=16.1" },
+{ name: "Steamed Mixed Vegetables", type: "healthy", kcal: 140, protein: 6, carbs: 22, fat: 2, image: "https://www.bing.com/th/id/OIP.88jZGHSwpP_zblx9BfgVGQHaLG?w=193&h=289&c=8&rs=1&qlt=90&o=6&pid=3.1&rm=2" },
+{ name: "Greek Yogurt with Honey", type: "healthy", kcal: 220, protein: 14, carbs: 28, fat: 6, image: "https://i.pinimg.com/originals/b9/f0/73/b9f0739a5d0f40b83800742bbfb1f829.jpg" },
+{ name: "Oatmeal with Berries", type: "healthy", kcal: 290, protein: 8, carbs: 52, fat: 6, image: "https://www.recipesbylucille.com/wp-content/uploads/2025/11/t5truqtrxdqep8awsfs2.webp" },
+{ name: "Grilled Turkey Breast", type: "healthy", kcal: 280, protein: 42, carbs: 2, fat: 8, image: "https://bbqgrillfit.com/wp-content/uploads/2025/09/Grill-Boneless-Turkey-Breast.webp" },
+{ name: "Baked Cod Fillet", type: "healthy", kcal: 210, protein: 36, carbs: 0, fat: 6, image: "https://thfvnext.bing.com/th/id/OIP.fhOlRg3Qaz2bHLNfONwVGQHaJQ?w=186&h=233&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Grilled Shrimp Plate", type: "healthy", kcal: 260, protein: 34, carbs: 4, fat: 10, image: "https://thumbs.dreamstime.com/z/grilled-shrimp-plate-wood-table-52400629.jpg" },
+{ name: "Lentil & Spinach Stew", type: "healthy", kcal: 340, protein: 22, carbs: 48, fat: 6, image: "https://tse1.mm.bing.net/th/id/OIP.FdJnBkI_Sk1rFOEngUVUxAHaJQ?cb=thfvnext&rs=1&pid=ImgDetMain&o=7&rm=3" },
+{ name: "Chickpea & Veggie Curry", type: "healthy", kcal: 390, protein: 16, carbs: 54, fat: 10, image: "https://mytriedrecipes.com/wp-content/uploads/2025/03/Chickpea-Veggie-Curry.webp" },
+{ name: "Black Bean Power Bowl", type: "healthy", kcal: 420, protein: 20, carbs: 62, fat: 10, image: "https://th.bing.com/th/id/R.dbfa25626c9838c35552650333720d0e?rik=Mvp8Ru%2fbHWxgIw&pid=ImgRaw&r=0" },
+{ name: "Sweet Potato & Kale Bowl", type: "healthy", kcal: 360, protein: 10, carbs: 62, fat: 8, image: "https://recipeflame.com/wp-content/uploads/2025/06/Sweet-Potato-Kale-Bowl.webp" },
+{ name: "Roasted Veggie Medley", type: "healthy", kcal: 220, protein: 6, carbs: 32, fat: 8, image: "https://thfvnext.bing.com/th/id/OIP.wYTHDuBhdzzb6mepxUlhOgHaHa?w=196&h=196&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Quinoa & Roasted Veg Bowl", type: "healthy", kcal: 410, protein: 14, carbs: 62, fat: 12, image: "https://annameals.com/wp-content/uploads/2025/11/Quinoa-and-Roasted-Vegetable-Bowl-with-Tahini-Dressing.jpg" },
+{ name: "Tofu Stir Fry", type: "healthy", kcal: 380, protein: 22, carbs: 32, fat: 18, image: "https://blog.goodpairdays.com/content/images/2019/11/Depositphotos_57547281_xl-2015.jpg" },
+{ name: "Grilled Tofu & Veggies", type: "healthy", kcal: 320, protein: 20, carbs: 18, fat: 16, image: "https://recipes-list.com/uploads/recipe-quinoa-with-grilled-vegetables-and-tofu.jpg" },
+{ name: "Tofu & Brown Rice Bowl", type: "healthy", kcal: 420, protein: 22, carbs: 56, fat: 12, image: "https://res.cloudinary.com/dmezmffej/image/upload/v1684763156/food-db/GA_8076.jpg" },
+{ name: "Grilled Veggie Wrap", type: "healthy", kcal: 330, protein: 12, carbs: 48, fat: 10, image: "https://recipesasseen.com/wp-content/uploads/2025/07/20250703T023032-683x1024.webp" },
+{ name: "Turkey & Avocado Wrap", type: "healthy", kcal: 420, protein: 34, carbs: 32, fat: 18, image: "https://tse1.mm.bing.net/th/id/OIP.qpqd6_MKuYuvv1UonZ-gTwHaJQ?cb=thfvnext&rs=1&pid=ImgDetMain&o=7&rm=3" },
+{ name: "Chicken & Veggie Wrap", type: "healthy", kcal: 390, protein: 36, carbs: 34, fat: 12, image: "https://thfvnext.bing.com/th/id/OIP.79SNRhVtfkr3gJDF3qeC3wHaFI?w=290&h=202&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Spinach & Feta Omelette", type: "healthy", kcal: 310, protein: 26, carbs: 6, fat: 20, image: "https://thfvnext.bing.com/th/id/OIP.drS82sMQLG3JxcxyoRi_XQHaE8?w=286&h=191&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Egg White Veggie Omelette", type: "healthy", kcal: 240, protein: 28, carbs: 4, fat: 10, image: "https://tse3.mm.bing.net/th/id/OIP.8uBgV3fQBbBDnGU66W_4UAHaHa?cb=thfvnext&rs=1&pid=ImgDetMain&o=7&rm=3" },
+{ name: "Avocado Toast (Whole Grain)", type: "healthy", kcal: 310, protein: 10, carbs: 34, fat: 16, image: "https://tse1.mm.bing.net/th/id/OIP.v5CyVSAFkr78ev6KRkkzaQHaLH?cb=thfvnext&rs=1&pid=ImgDetMain&o=7&rm=3" },
+{ name: "Berry Protein Smoothie", type: "healthy", kcal: 260, protein: 22, carbs: 32, fat: 4, image: "https://thfvnext.bing.com/th/id/OIP.TW1q-05F-QzG3YO1aj6XPwHaHa?w=205&h=205&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Green Detox Smoothie", type: "healthy", kcal: 210, protein: 6, carbs: 38, fat: 2, image: "https://thfvnext.bing.com/th/id/OIP.t64VRu_22-b-fcHGW6rS-AHaLH?w=204&h=306&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Mango Protein Smoothie", type: "healthy", kcal: 280, protein: 20, carbs: 42, fat: 4, image: "https://thfvnext.bing.com/th/id/OIP.gilCXo_Ji3dLP09I5-u0eAHaJ4?w=205&h=273&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Grilled Asparagus Plate", type: "healthy", kcal: 120, protein: 6, carbs: 10, fat: 6, image: "https://thfvnext.bing.com/th/id/OIP.DlHAUiNKyX5Vgqhfx0LmVgHaFl?w=249&h=188&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Roasted Brussels Sprouts", type: "healthy", kcal: 160, protein: 6, carbs: 18, fat: 8, image: "https://thfvnext.bing.com/th/id/OIP._CGslgMmUnU28lPOa04uHwHaJQ?w=205&h=256&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Garlic Sautéed Spinach", type: "healthy", kcal: 110, protein: 5, carbs: 6, fat: 8, image: "https://i2.wp.com/www.downshiftology.com/wp-content/uploads/2021/01/Garlic-Sauteed-Spinach-8-1024x1536.jpg" },
+{ name: "Chicken & Sweet Potato Plate", type: "healthy", kcal: 460, protein: 42, carbs: 48, fat: 10, image: "https://tse3.mm.bing.net/th/id/OIP.4V1-Q0h3lhNjVh6V4hR1IwHaFl?cb=thfvnext&rs=1&pid=ImgDetMain&o=7&rm=3" },
+{ name: "Turkey & Quinoa Plate", type: "healthy", kcal: 440, protein: 40, carbs: 42, fat: 12, image: "https://jennierecipes.com/wp-content/uploads/2025/10/turkey-quinoa-power-bowl-2-1-0ffzolnw.png" },
+{ name: "Salmon & Brown Rice Plate", type: "healthy", kcal: 520, protein: 44, carbs: 42, fat: 20, image: "https://media.istockphoto.com/id/157686347/photo/salmon-filet-with-wild-rice.jpg?s=612x612&w=0&k=20&c=j9twOlrpFhdI-_ByRYVXR3ukcux7kpI1T-4pSd_GXVw=" },
+{ name: "Cucumber & Tomato Salad", type: "healthy", kcal: 140, protein: 4, carbs: 18, fat: 6, image: "https://thfvnext.bing.com/th/id/OIP.AEt8ODvJVJtViGC65Mn5-gHaLG?w=204&h=306&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Kale & Walnut Salad", type: "healthy", kcal: 260, protein: 8, carbs: 18, fat: 18, image: "https://thfvnext.bing.com/th/id/OIP.Hw4TqCTauJkYsekxKtc9QgHaLL?w=203&h=307&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Mediterranean Chickpea Salad", type: "healthy", kcal: 320, protein: 12, carbs: 42, fat: 12, image: "https://thfvnext.bing.com/th/id/OIP.Nfox9puePw82_7xThqXJ7QHaHa?w=205&h=205&c=7&r=0&o=7&cb=thfvnext&pid=1.7&rm=3" },
+{ name: "Fresh Fruit Plate", type: "healthy", kcal: 180, protein: 2, carbs: 46, fat: 0, image: "https://th.bing.com/th/id/R.33899d12a6cd6587196fb6021d7772fc?rik=Xy8Hn6xsvhQrWA&riu=http%3a%2f%2f2.bp.blogspot.com%2f-LGFz78LCUPs%2fUVzfuPmfngI%2fAAAAAAAAC28%2fqlyk2IPEXks%2fs1600%2fIMG_5498.JPG&ehk=05xGP%2bVvBE9ulIU8G3GdNmekVtS0zL8cpmE6B029pWk%3d&risl=&pid=ImgRaw&r=0" },
+  ];
+  
+  const ALL_FOODS = [...FAST_ITEMS, ...HEALTHY_ITEMS];
+  
+  // ----- left panel state -----
+  let fastSelectedKcal = 0;
+  let healthySelectedKcal = 0;
+  
+  function renderClassicPanels() {
+    const fastContainer = document.getElementById('fastItemsContainer');
+    const healthyContainer = document.getElementById('healthyItemsContainer');
+    fastContainer.innerHTML = FAST_ITEMS.map(f => `
+      <div class="food-item fast" data-kcal="${f.kcal}" data-name="${f.name}" data-protein="${f.protein}" data-carbs="${f.carbs}" data-fat="${f.fat}" data-img="${f.image}">
+        <div class="item-name">${f.name}<span>fast</span></div>
+        <div class="kcal-badge">${f.kcal} kcal</div>
+      </div>
+    `).join('');
+    healthyContainer.innerHTML = HEALTHY_ITEMS.map(f => `
+      <div class="food-item healthy" data-kcal="${f.kcal}" data-name="${f.name}" data-protein="${f.protein}" data-carbs="${f.carbs}" data-fat="${f.fat}" data-img="${f.image}">
+        <div class="item-name">${f.name}<span>healthy</span></div>
+        <div class="kcal-badge">${f.kcal} kcal</div>
+      </div>
+    `).join('');
+    
+    document.querySelectorAll('.food-item.fast').forEach(el => {
+      el.removeEventListener('click', fastClickHandler);
+      el.addEventListener('click', fastClickHandler);
+    });
+    document.querySelectorAll('.food-item.healthy').forEach(el => {
+      el.removeEventListener('click', healthyClickHandler);
+      el.addEventListener('click', healthyClickHandler);
+    });
+  }
+  
+  function fastClickHandler(e) {
+    const el = e.currentTarget;
+    document.querySelectorAll('.food-item.fast').forEach(i=>i.classList.remove('selectedA'));
+    el.classList.add('selectedA');
+    fastSelectedKcal = parseInt(el.dataset.kcal);
+    updateClassicUI();
+  }
+  
+  function healthyClickHandler(e) {
+    const el = e.currentTarget;
+    document.querySelectorAll('.food-item.healthy').forEach(i=>i.classList.remove('selectedB'));
+    el.classList.add('selectedB');
+    healthySelectedKcal = parseInt(el.dataset.kcal);
+    updateClassicUI();
+  }
+  
+  function updateClassicUI() {
+    document.getElementById('fastTotalSpan').innerText = fastSelectedKcal + ' kcal';
+    document.getElementById('healthyTotalSpan').innerText = healthySelectedKcal + ' kcal';
+    const diff = fastSelectedKcal - healthySelectedKcal;
+    document.getElementById('diffSpan').innerHTML = diff > 0 ? `Fast +${diff} kcal` : (diff < 0 ? `Healthy +${Math.abs(diff)} kcal` : 'Equal');
+  }
+  document.getElementById('resetClassicBtn').addEventListener('click', () => { 
+    fastSelectedKcal = 0; 
+    healthySelectedKcal = 0; 
+    updateClassicUI(); 
+    document.querySelectorAll('.food-item').forEach(i=>i.classList.remove('selectedA','selectedB'));
+  });
+  
+  // ----- CUSTOM PLATE (only healthy items allowed) -----
+  let customPlate = [];
+  function updateBuilderUI() {
+    const container = document.getElementById('customPlateList');
+    if(customPlate.length === 0) { 
+      container.innerHTML = '<div style="text-align:center; color:#94a3b8;">✨ Your plate is empty ✨</div>'; 
+    } else {
+      container.innerHTML = customPlate.map((item, idx) => `
+        <div class="plate-item">
+          <img class="plate-item-img" src="${item.image}" onerror="this.src='https://placehold.co/60x60/334155?text=Food'">
+          <div class="plate-item-info"><strong>${item.name}</strong><br>🔥${item.kcal} kcal | P:${item.protein}g C:${item.carbs}g F:${item.fat}g</div>
+          <button class="remove-btn" data-index="${idx}">✖</button>
+        </div>
+      `).join('');
+      document.querySelectorAll('.remove-btn').forEach(btn => { 
+        btn.addEventListener('click', (e) => { 
+          const idx = parseInt(btn.dataset.index); 
+          customPlate.splice(idx,1); 
+          updateBuilderUI(); 
+        }); 
+      });
+    }
+    let totalC = 0, totalP = 0, totalCarb = 0, totalF = 0;
+    customPlate.forEach(i => { totalC += i.kcal; totalP += i.protein; totalCarb += i.carbs; totalF += i.fat; });
+    document.getElementById('plateCalories').innerText = totalC;
+    document.getElementById('plateProtein').innerText = totalP + 'g';
+    document.getElementById('plateCarbs').innerText = totalCarb + 'g';
+    document.getElementById('plateFat').innerText = totalF + 'g';
+  }
+  
+  function addToPlate(item) { 
+    if(item.type === 'healthy') { 
+      customPlate.push({...item}); 
+      updateBuilderUI(); 
+    } else { 
+      alert('🌱 Only healthy items can be added to your balanced plate!'); 
+    } 
+  }
+  document.getElementById('clearPlateBtn').addEventListener('click', () => { customPlate = []; updateBuilderUI(); });
+  
+  function renderSuggestions() {
+    const healthyOnly = HEALTHY_ITEMS;
+    const grid = document.getElementById('suggestionsGrid');
+    grid.innerHTML = healthyOnly.map(f => `
+      <div class="suggest-card" data-name="${f.name}" data-kcal="${f.kcal}" data-protein="${f.protein}" data-carbs="${f.carbs}" data-fat="${f.fat}" data-img="${f.image}" data-type="${f.type}">
+        <img class="suggest-img" src="${f.image}" onerror="this.src='https://placehold.co/100x70/334155?text=Food'">
+        <div class="suggest-name">${f.name}</div>
+        <div class="suggest-kcal">${f.kcal} kcal</div>
+      </div>
+    `).join('');
+    document.querySelectorAll('.suggest-card').forEach(card => {
+      card.addEventListener('click', () => { 
+        addToPlate({ 
+          name: card.dataset.name, 
+          kcal: parseInt(card.dataset.kcal), 
+          protein: parseInt(card.dataset.protein), 
+          carbs: parseInt(card.dataset.carbs), 
+          fat: parseInt(card.dataset.fat), 
+          image: card.dataset.img, 
+          type: card.dataset.type 
+        }); 
+      });
+    });
+  }
+  
+  // ----- COMPARE A/B & EXPLORER -----
+  let compareA = null, compareB = null;
+  function updateCompareUI() {
+    const updateCard = (side, item) => {
+      const nameEl = document.getElementById(`compare${side}Name`);
+      const kcalEl = document.getElementById(`compare${side}Kcal`);
+      const imgEl = document.getElementById(`compare${side}Img`);
+      const macroStrip = document.getElementById(`macro${side}Strip`);
+      if(item) {
+        nameEl.innerText = item.name;
+        kcalEl.innerText = item.kcal + ' kcal';
+        imgEl.src = item.image;
+        imgEl.onerror = () => { imgEl.src = 'https://placehold.co/200x110/1e293b?text=Food'; };
+        macroStrip.innerHTML = `<div class="macro-row"><span>💪P</span><div class="macro-bar-bg"><div class="macro-fill" style="width:${Math.min((item.protein/80)*100,100)}%"></div></div><span>${item.protein}g</span></div>
+                                <div class="macro-row"><span>🍚C</span><div class="macro-bar-bg"><div class="macro-fill" style="width:${Math.min((item.carbs/80)*100,100)}%"></div></div><span>${item.carbs}g</span></div>
+                                <div class="macro-row"><span>🧈F</span><div class="macro-bar-bg"><div class="macro-fill" style="width:${Math.min((item.fat/80)*100,100)}%"></div></div><span>${item.fat}g</span></div>`;
+      } else { 
+        nameEl.innerText = '—'; 
+        kcalEl.innerText = '0 kcal'; 
+        imgEl.src = 'https://placehold.co/200x110/1e293b?text=—'; 
+        macroStrip.innerHTML = ''; 
+      }
+    };
+    updateCard('A', compareA); 
+    updateCard('B', compareB);
+  }
+  document.getElementById('swapABBtn').addEventListener('click', () => { let t = compareA; compareA = compareB; compareB = t; updateCompareUI(); });
+  
+  let currentFilter = 'all', searchTerm = '';
+  function renderExplorer() {
+    let filtered = ALL_FOODS.filter(f => (currentFilter === 'all' || f.type === currentFilter) && f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const grid = document.getElementById('explorerGrid');
+    grid.innerHTML = filtered.map((item, idx) => `
+      <div class="exp-card" data-index="${idx}" data-item='${JSON.stringify(item)}'>
+        <img class="exp-img" src="${item.image}" onerror="this.src='https://placehold.co/100x85/334155?text=Food'">
+        <div style="font-weight:bold; font-size:0.75rem;">${item.name}</div>
+        <div style="font-size:0.7rem;">${item.kcal} kcal</div>
+        <button class="tiny-btn set-a-btn">Set A</button>
+        <button class="tiny-btn set-b-btn">Set B</button>
+        <button class="tiny-btn add-plate-btn" style="background:#2dd4bf;">➕Plate</button>
+      </div>
+    `).join('');
+    
+    document.querySelectorAll('.exp-card').forEach((card, i) => {
+      const itemData = JSON.parse(card.getAttribute('data-item'));
+      card.querySelector('.set-a-btn')?.addEventListener('click', (e) => { e.stopPropagation(); compareA = itemData; updateCompareUI(); });
+      card.querySelector('.set-b-btn')?.addEventListener('click', (e) => { e.stopPropagation(); compareB = itemData; updateCompareUI(); });
+      card.querySelector('.add-plate-btn')?.addEventListener('click', (e) => { e.stopPropagation(); addToPlate(itemData); });
+      card.addEventListener('click', () => openModal(itemData));
+    });
+  }
+  
+  function openModal(item) {
+    document.getElementById('modalImg').src = item.image;
+    document.getElementById('modalName').innerText = item.name;
+    document.getElementById('modalMacros').innerHTML = `<span>🔥 ${item.kcal} kcal &nbsp; 💪${item.protein}g &nbsp; 🍚${item.carbs}g &nbsp; 🧈${item.fat}g</span>`;
+    const modalDiv = document.getElementById('itemModal');
+    modalDiv.classList.add('open');
+    document.getElementById('modalSetA').onclick = () => { compareA = item; updateCompareUI(); modalDiv.classList.remove('open'); };
+    document.getElementById('modalSetB').onclick = () => { compareB = item; updateCompareUI(); modalDiv.classList.remove('open'); };
+    document.getElementById('modalAddPlate').onclick = () => { addToPlate(item); modalDiv.classList.remove('open'); };
+  }
+  
+  document.getElementById('closeModal').addEventListener('click', () => document.getElementById('itemModal').classList.remove('open'));
+  document.getElementById('itemModal').addEventListener('click', (e) => { if(e.target === document.getElementById('itemModal')) document.getElementById('itemModal').classList.remove('open'); });
+  document.querySelectorAll('.filter-tab').forEach(btn => { 
+    btn.addEventListener('click', () => { 
+      document.querySelectorAll('.filter-tab').forEach(b=>b.classList.remove('active')); 
+      btn.classList.add('active'); 
+      currentFilter = btn.dataset.filter; 
+      renderExplorer(); 
+    }); 
+  });
+  document.getElementById('searchInput').addEventListener('input', (e) => { searchTerm = e.target.value; renderExplorer(); });
+  
+  // ----- INIT ALL -----
+  renderClassicPanels();
+  renderSuggestions();
+  renderExplorer();
+  updateBuilderUI();
+  updateCompareUI();
+  updateClassicUI();
+</script>
+
+</body>
+</html>
